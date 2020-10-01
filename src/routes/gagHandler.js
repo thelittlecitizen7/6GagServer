@@ -56,13 +56,17 @@ var gags = () => {
     router.post('/api/upload',uploads.any(), (req, res) => {
         try 
         {
-            let bianryData = req.files[0].buffer;
-            var base64data = Buffer.from(bianryData, 'binary').toString('base64');
+            var base64data = undefined
+            if (req.files.length > 0){
+                let bianryData = req.files[0].buffer;
+                var base64data = Buffer.from(bianryData, 'binary').toString('base64');
+            }
             
             var text = req.body.text
             var title = req.body.title
+            var name = req.body.name
 
-            let gag = new Gag(title,text,base64data)
+            let gag = new Gag(title,text,name,base64data)
             handler.addGag(gag)
             res.status(200).json(handler.getGag(gag.id));
         } catch (err) {
@@ -70,7 +74,42 @@ var gags = () => {
             res.status(500).json({ message: `cannot insert username with err ${err}` });
         }
     });
+    
+    router.put('/api/like', (req, res) => {
+        try 
+        {
+            var name = req.body.name
+            var isLike = req.body.isLike
+            var gagId = req.body.id
 
+            
+            if (isLike){
+                if (handler.isUserInLikes(name,gagId) || handler.isUserInUnLikes(name,gagId)){
+                    res.status(409).json({"error":"user already voted"});
+                    
+                }
+                else{
+                    handler.addLike(name,gagId)
+                    res.status(200).json({"likes":handler.getGag(gagId)});
+                }
+            }
+            else{
+                if (handler.isUserInUnLikes(name,gagId) || handler.isUserInLikes(name,gagId) ){
+                    res.status(409).json({"error":"user already voted"});
+                    
+                }
+                else{
+                    handler.addUnlike(name,gagId)
+                    res.status(200).json({"unlikes":handler.getUnLikesCount(gagId)});
+                    
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ message: `cannot insert username with err ${err}` });
+        }
+    });
+    
     return router;
 }
 module.exports = gags;
